@@ -28,8 +28,9 @@ export async function buildComposition(params: {
   manifest: CaptureManifest;
   hyperframesProjectDir: string;
   fallbackStepDurationSec: number;
+  hideCaptionsWhenNarrated: boolean;
 }): Promise<BuildCompositionResult> {
-  const { demoScript, manifest, hyperframesProjectDir, fallbackStepDurationSec } = params;
+  const { demoScript, manifest, hyperframesProjectDir, fallbackStepDurationSec, hideCaptionsWhenNarrated } = params;
 
   const assetsDir = join(hyperframesProjectDir, "assets");
   await mkdir(assetsDir, { recursive: true });
@@ -42,6 +43,16 @@ export async function buildComposition(params: {
   for (const manifestStep of manifest.steps) {
     const demoStep = stepsById.get(manifestStep.id);
     const captionText = manifestStep.captionText || demoStep?.captionText || manifestStep.instruction;
+
+    // Copy the narration audio (if the narrate stage produced it) into the composition and time the
+    // segment to it. hideCaptionsWhenNarrated lets a narrated video drop the burned-in caption.
+    let audioSrc: string | undefined;
+    if (manifestStep.audioPath) {
+      const audioFileName = `${manifestStep.id}.mp3`;
+      await copyFile(manifestStep.audioPath, join(assetsDir, audioFileName));
+      audioSrc = `assets/${audioFileName}`;
+    }
+    const showCaption = !(audioSrc && hideCaptionsWhenNarrated);
 
     if (manifestStep.status === "success" && manifestStep.clipPath) {
       const durationSec = manifestStep.clipDurationMs
@@ -57,12 +68,17 @@ export async function buildComposition(params: {
           duration: durationSec,
           clipSrc: `assets/${assetFileName}`,
           captionText,
+          audioSrc,
+          showCaption,
         })
       );
       currentTime += durationSec;
     } else {
-      const durationSec = fallbackStepDurationSec;
-      segments.push(failedStepFallbackHtml({ start: currentTime, duration: durationSec, captionText }));
+      // For a failed step, prefer the narration length so the fallback card holds for the voice line.
+      const durationSec = manifestStep.audioDurationMs
+        ? manifestStep.audioDurationMs / 1000
+        : fallbackStepDurationSec;
+      segments.push(failedStepFallbackHtml({ start: currentTime, duration: durationSec, captionText, audioSrc }));
       currentTime += durationSec;
     }
   }

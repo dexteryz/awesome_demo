@@ -16,6 +16,7 @@ export interface RunPaths {
   demoScriptPath: string;
   manifestPath: string;
   clipsDir: string;
+  audioDir: string;
   screenshotsDir: string;
   storageStatePath: string;
   hyperframesProjectDir: string;
@@ -30,6 +31,7 @@ export function resolveRunPaths(runsDir: string, runId: string): RunPaths {
     demoScriptPath: join(runDir, "demo-script.json"),
     manifestPath: join(runDir, "manifest.json"),
     clipsDir: join(runDir, "clips"),
+    audioDir: join(runDir, "audio"),
     screenshotsDir: join(runDir, "screenshots"),
     storageStatePath: join(runDir, "storage-state.json"),
     hyperframesProjectDir: join(runDir, "hyperframes-project"),
@@ -38,6 +40,7 @@ export function resolveRunPaths(runsDir: string, runId: string): RunPaths {
   };
   mkdirSync(paths.runDir, { recursive: true });
   mkdirSync(paths.clipsDir, { recursive: true });
+  mkdirSync(paths.audioDir, { recursive: true });
   mkdirSync(paths.screenshotsDir, { recursive: true });
   return paths;
 }

@@ -63,8 +63,11 @@ export const ConfigSchema = z.object({
   narration: z
     .object({
       enabled: z.boolean().default(false),
+      provider: z.enum(["elevenlabs"]).default("elevenlabs"),
+      voiceId: z.string().nullable().default(null),
+      modelId: z.string().default("eleven_multilingual_v2"),
     })
-    .default({ enabled: false }),
+    .default({}),
   github: z
     .object({
       repo: z.string().nullable().default(null),

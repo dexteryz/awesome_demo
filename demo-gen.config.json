@@ -31,10 +31,13 @@
   },
   "hyperframes": {
     "outputFile": "demo.mp4",
-    "hideCaptionsWhenNarrated": true
+    "hideCaptionsWhenNarrated": false
   },
   "narration": {
-    "enabled": false
+    "enabled": false,
+    "provider": "elevenlabs",
+    "voiceId": null,
+    "modelId": "eleven_multilingual_v2"
   },
   "github": {
     "repo": null

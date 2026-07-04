@@ -26,6 +26,7 @@ export async function runAssemble(params: {
     manifest,
     hyperframesProjectDir,
     fallbackStepDurationSec: config.capture.fallbackStepDurationSec,
+    hideCaptionsWhenNarrated: config.hyperframes.hideCaptionsWhenNarrated,
   });
   logger.info(`Composition built (${totalDurationSec.toFixed(1)}s total)`);
 

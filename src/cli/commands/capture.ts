@@ -58,6 +58,7 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
       let success = false;
       let reason = "";
       let clipPath: string | null = null;
+      let rawClipPath: string | null = null;
       let clipDurationMs: number | null = null;
       let screenshotBefore: string | null = null;
       let screenshotAfter: string | null = null;
@@ -102,16 +103,17 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
         }
 
         if (success && recordedVideoPath) {
-          const rawClipPath = join(paths.clipsDir, `${step.id}.webm`);
+          const finalRawPath = join(paths.clipsDir, `${step.id}.webm`);
           try {
-            await rename(recordedVideoPath, rawClipPath);
-            clipPath = rawClipPath;
-            clipDurationMs = await getMediaDurationMs(rawClipPath);
+            await rename(recordedVideoPath, finalRawPath);
+            rawClipPath = finalRawPath;
+            clipPath = finalRawPath;
+            clipDurationMs = await getMediaDurationMs(finalRawPath);
 
             // Strip the dead air from recording per-turn API latency and pace the clip. Falls back
             // to the raw clip if ffmpeg fails so a step is never lost to post-processing.
             if (config.capture.tighten.enabled) {
-              const tightened = await tightenClip(rawClipPath, join(paths.clipsDir, `${step.id}.mp4`), {
+              const tightened = await tightenClip(finalRawPath, join(paths.clipsDir, `${step.id}.mp4`), {
                 targetStepDurationSec: config.capture.tighten.targetStepDurationSec,
                 minStepDurationSec: config.capture.tighten.minStepDurationSec,
                 removeIdleFrames: config.capture.tighten.removeIdleFrames,
@@ -148,7 +150,10 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
         captionText: step.captionText,
         narrationText: step.narrationText,
         clipPath,
+        rawClipPath,
         clipDurationMs,
+        audioPath: null,
+        audioDurationMs: null,
         screenshotBefore,
         screenshotAfter,
         endUrl,

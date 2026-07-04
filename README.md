@@ -8,7 +8,7 @@ Given a PR, `demo-gen`:
 2. **capture** — an autonomous Claude + Playwright agent drives your running app through those steps, looking at each page and deciding what to click/type itself, recording a video clip and screenshots per step.
 3. **assemble** — turns the captured clips into a [Hyperframes](https://hyperframes.heygen.com/) composition (intro card → captioned step clips → outro card) and renders it to an `.mp4`.
 
-Voice narration (ElevenLabs) is not implemented yet, but the pipeline already carries a `narrationText` line per step so it can be added without touching stages 1–2.
+An optional **narrate** stage (2.5) sits between capture and assemble: it synthesizes a voice line per step via ElevenLabs and re-paces each clip to match its narration length, so audio and picture line up by construction. It's off by default — set `narration.enabled` and a `narration.voiceId` to turn it on.
 
 ## Prerequisites
 
@@ -58,13 +58,29 @@ demo-gen generate --pr https://github.com/owner/repo/pull/123
 
 `--pr` accepts a GitHub PR URL/number (fetched via `gh`) **or** a path to a local PR fixture JSON file. Each run writes to `runs/<run-id>/` (demo script, manifest, clips, screenshots, the Hyperframes project, `demo.mp4`, and a `run.log`).
 
-The three stages can also be run individually — useful for iterating without re-spending on earlier stages:
+The stages can also be run individually — useful for iterating without re-spending on earlier stages:
 
 ```bash
 demo-gen analyze  --pr <ref>          --out demo-script.json
 demo-gen capture  --script demo-script.json --out manifest.json
+demo-gen narrate  --manifest manifest.json                 # optional; needs ELEVENLABS_API_KEY + voiceId
 demo-gen assemble --manifest manifest.json --script demo-script.json --out demo.mp4
 ```
+
+### Narration (optional)
+
+Set in `demo-gen.config.json`:
+
+```jsonc
+"narration": {
+  "enabled": true,
+  "provider": "elevenlabs",
+  "voiceId": "<your ElevenLabs voice id>",   // a cloned voice of yourself, or a stock voice
+  "modelId": "eleven_multilingual_v2"
+}
+```
+
+and put `ELEVENLABS_API_KEY` in your `.env`. When enabled, `generate` runs the narrate stage automatically. Each step's clip is re-timed to its voice line's length (this replaces the fixed `capture.tighten` target for narrated runs). Captions are kept alongside the voice by default; set `hyperframes.hideCaptionsWhenNarrated: true` to drop the on-screen text when narration is present.
 
 ## Try it against the bundled fixture
 

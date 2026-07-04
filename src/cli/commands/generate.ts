@@ -4,6 +4,7 @@ import type { RunPaths } from "../../shared/paths.js";
 import { runAnalyze } from "./analyze.js";
 import { captureDemo } from "./capture.js";
 import { runAssemble } from "./assemble.js";
+import { narrate } from "../../narration/narrate.js";
 
 /** Chains analyze -> capture -> assemble, stopping and reporting the last-good artifact on failure. */
 export async function runGenerate(params: {
@@ -22,6 +23,11 @@ export async function runGenerate(params: {
   const manifest = await captureDemo({ demoScriptPath: paths.demoScriptPath, config, paths, runId, logger });
   if (manifest.meta.overallStatus === "partial") {
     logger.warn("Some steps failed to capture; assembling with fallback cards for those steps.");
+  }
+
+  if (config.narration.enabled) {
+    logger.info("=== Stage 2.5: narrate ===");
+    await narrate({ manifestPath: paths.manifestPath, config, paths, logger });
   }
 
   logger.info("=== Stage 3: assemble ===");
