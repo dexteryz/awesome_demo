@@ -36,6 +36,15 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
   const startedAt = new Date().toISOString();
   const steps: ManifestStep[] = [];
 
+  const cursorEnabled = config.capture.cursor.enabled;
+  const motion = cursorEnabled
+    ? {
+        moveSteps: config.capture.cursor.moveSteps,
+        clickPauseMs: config.capture.cursor.clickPauseMs,
+        typeDelayMs: config.capture.cursor.typeDelayMs,
+      }
+    : null;
+
   try {
     const seedContext = await browser.newContext({ viewport: config.app.viewport });
     const seedPage = await seedContext.newPage();
@@ -72,6 +81,7 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
           viewport: config.app.viewport,
           videoDir: paths.clipsDir,
           videoSize: config.capture.video,
+          injectCursor: cursorEnabled,
         });
 
         let recordedVideoPath: string | null = null;
@@ -87,6 +97,7 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
             model: config.models.browserAgent,
             maxTurns: config.capture.maxTurnsPerStep,
             logger,
+            motion,
           });
 
           const afterPath = join(paths.screenshotsDir, `${step.id}-after-attempt${attempts}.png`);

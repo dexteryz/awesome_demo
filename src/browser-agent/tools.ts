@@ -1,5 +1,6 @@
 import type { Anthropic } from "@anthropic-ai/sdk";
 import type { Locator, Page } from "playwright";
+import { humanClick, humanType, type CursorMotion } from "./cursor.js";
 
 export const toolDefinitions: Anthropic.Tool[] = [
   {
@@ -168,7 +169,7 @@ export async function resolveLocator(page: Page, description: string, elementRef
   return null;
 }
 
-export function createToolExecutors(page: Page): ToolExecutors {
+export function createToolExecutors(page: Page, motion?: CursorMotion | null): ToolExecutors {
   return {
     async click({ description, elementRef }) {
       const locator = await resolveLocator(page, description, elementRef);
@@ -176,7 +177,8 @@ export function createToolExecutors(page: Page): ToolExecutors {
         return { content: `No element found matching description: "${description}"`, isError: true };
       }
       try {
-        await locator.click({ timeout: 5000 });
+        if (motion) await humanClick(page, locator, motion);
+        else await locator.click({ timeout: 5000 });
         return { content: `Clicked element matching "${description}".` };
       } catch (err) {
         return { content: `Click failed: ${(err as Error).message}`, isError: true };
@@ -189,8 +191,12 @@ export function createToolExecutors(page: Page): ToolExecutors {
         return { content: `No input found matching description: "${description}"`, isError: true };
       }
       try {
-        await locator.fill(text, { timeout: 5000 });
-        if (submit) await locator.press("Enter");
+        if (motion) {
+          await humanType(page, locator, text, Boolean(submit), motion);
+        } else {
+          await locator.fill(text, { timeout: 5000 });
+          if (submit) await locator.press("Enter");
+        }
         return { content: `Typed into field matching "${description}"${submit ? " and pressed Enter" : ""}.` };
       } catch (err) {
         return { content: `Type failed: ${(err as Error).message}`, isError: true };

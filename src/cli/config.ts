@@ -47,6 +47,14 @@ export const ConfigSchema = z.object({
           removeIdleFrames: z.boolean().default(false),
         })
         .default({}),
+      cursor: z
+        .object({
+          enabled: z.boolean().default(true),
+          moveSteps: z.number().default(25),
+          clickPauseMs: z.number().default(250),
+          typeDelayMs: z.number().default(55),
+        })
+        .default({}),
     })
     .default({}),
   output: z

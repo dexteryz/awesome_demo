@@ -5,6 +5,7 @@ import type { RunLogger } from "../shared/logger.js";
 import type { DemoStep } from "../pr-analysis/schema.js";
 import { toolDefinitions, createToolExecutors, type ToolExecutors } from "./tools.js";
 import { capturePageState } from "./page-state.js";
+import type { CursorMotion } from "./cursor.js";
 import type { ToolCallLogEntry } from "./manifest.js";
 
 const STEP_SYSTEM_PROMPT = `You are driving a real web browser, one step of a product demo at a time. You will \
@@ -68,10 +69,11 @@ export async function runStepAgentLoop(params: {
   model: ModelConfig;
   maxTurns: number;
   logger: RunLogger;
+  motion?: CursorMotion | null;
 }): Promise<StepAgentResult> {
-  const { page, step, model, maxTurns, logger } = params;
+  const { page, step, model, maxTurns, logger, motion } = params;
   const client = getClaudeClient();
-  const executors = createToolExecutors(page);
+  const executors = createToolExecutors(page, motion);
   const toolCallLog: ToolCallLogEntry[] = [];
 
   const messages: Anthropic.MessageParam[] = [

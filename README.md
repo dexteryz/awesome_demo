@@ -57,6 +57,11 @@ The tool targets one app at a time via `demo-gen.config.json` in your working di
   - `minStepDurationSec` (default 2.5) — floor; a shorter/collapsed clip holds its last frame to reach it
   - `removeIdleFrames` (default false) — extra `mpdecimate` pass that drops near-duplicate frames; aggressive, best for extremely static UIs
   - `enabled` (default true) — set false to keep raw recordings
+- `capture.cursor` — a synthetic on-screen cursor that glides to each element and clicks, since Playwright's recording has no OS pointer (see below):
+  - `enabled` (default true) — set false for pointerless, instant clicks
+  - `moveSteps` (default 25) — glide smoothness; more steps = slower, smoother movement
+  - `clickPauseMs` (default 250) — pause after the pointer arrives, before clicking
+  - `typeDelayMs` (default 55) — per-character delay for realistic typing
 
 See the checked-in `demo-gen.config.json` (configured for the bundled fixture app) as a template.
 
@@ -116,6 +121,10 @@ Open the resulting `runs/<run-id>/demo.mp4`.
 ## Pacing / dead air
 
 The browser recording captures the whole agent loop, including the seconds spent waiting on each Claude API call between actions — a motionless page while the model "thinks". For mostly-static SaaS UIs that makes raw clips feel slow. The `capture.tighten` pass fixes this by giving each step a clean, consistent beat (default ~4s), only ever speeding up over-long clips, never slowing anything down. This is also the natural hook for narration: when voice is added, set each step's target duration to its voice-line length instead of a fixed number.
+
+## Cursor
+
+Playwright's `recordVideo` captures the page's rendering, not the OS pointer — and synthetic clicks land instantly with no visible movement, unlike a real screen-share. The `capture.cursor` feature injects a synthetic cursor into each recorded page (a DOM element, so it's captured) and glides Playwright's real virtual pointer to each target in interpolated steps before clicking, with a click pulse and realistic per-character typing. The result reproduces the move-to-target-and-click a viewer expects. It stays fully deterministic and headless (no OS mouse control).
 
 ## Notes & limitations
 

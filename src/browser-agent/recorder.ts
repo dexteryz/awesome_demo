@@ -1,4 +1,5 @@
 import type { Browser, BrowserContext, Page } from "playwright";
+import { CURSOR_INIT_SCRIPT } from "./cursor.js";
 
 export interface StepRecordingHandle {
   context: BrowserContext;
@@ -18,6 +19,7 @@ export async function openStepContext(
     viewport: { width: number; height: number };
     videoDir: string;
     videoSize: { width: number; height: number };
+    injectCursor?: boolean;
   }
 ): Promise<StepRecordingHandle> {
   const context = await browser.newContext({
@@ -25,7 +27,16 @@ export async function openStepContext(
     viewport: params.viewport,
     recordVideo: { dir: params.videoDir, size: params.videoSize },
   });
+  if (params.injectCursor) {
+    // Runs before page scripts on every navigation, so the synthetic cursor survives in-app routing.
+    await context.addInitScript(CURSOR_INIT_SCRIPT);
+  }
   const page = await context.newPage();
+  if (params.injectCursor) {
+    // Seat the virtual pointer at viewport center so the first glide starts from the middle,
+    // matching where the injected cursor initializes (no jump from the 0,0 corner).
+    await page.mouse.move(params.viewport.width / 2, params.viewport.height / 2);
+  }
   return { context, page };
 }
 
