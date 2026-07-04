@@ -79,5 +79,16 @@ export type Config = z.infer<typeof ConfigSchema>;
 
 export function loadConfig(path: string): Config {
   const raw = JSON.parse(readFileSync(path, "utf8"));
-  return ConfigSchema.parse(raw);
+  const config = ConfigSchema.parse(raw);
+
+  // Env overrides let personal/local narration settings live in .env (gitignored) instead of the
+  // checked-in config, so a voice id or "on" switch never lands in the committed template.
+  if (process.env.ELEVENLABS_VOICE_ID) {
+    config.narration.voiceId = process.env.ELEVENLABS_VOICE_ID;
+  }
+  if (process.env.NARRATION_ENABLED !== undefined) {
+    config.narration.enabled = process.env.NARRATION_ENABLED === "true";
+  }
+
+  return config;
 }

@@ -38,25 +38,34 @@ export class ElevenLabsProvider implements TtsProvider {
   }
 
   async synthesizeToFile(text: string, outputPath: string): Promise<void> {
-    const res = await fetch(`${ELEVENLABS_TTS_URL}/${this.config.voiceId}`, {
-      method: "POST",
-      headers: {
-        "xi-api-key": this.apiKey,
-        "Content-Type": "application/json",
-        Accept: "audio/mpeg",
-      },
-      body: JSON.stringify({
-        text,
-        model_id: this.config.modelId,
-      }),
-    });
+    const maxRetries = 4;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const res = await fetch(`${ELEVENLABS_TTS_URL}/${this.config.voiceId}`, {
+        method: "POST",
+        headers: {
+          "xi-api-key": this.apiKey,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+        },
+        body: JSON.stringify({
+          text,
+          model_id: this.config.modelId,
+        }),
+      });
 
-    if (!res.ok) {
+      if (res.ok) {
+        const buffer = Buffer.from(await res.arrayBuffer());
+        await writeFile(outputPath, buffer);
+        return;
+      }
+
       const detail = await res.text().catch(() => "");
-      throw new Error(`ElevenLabs TTS failed (${res.status} ${res.statusText}): ${detail.slice(0, 300)}`);
+      // 429 "system_busy" and 5xx are transient — back off and retry. 4xx (bad key/voice) are not.
+      const retryable = res.status === 429 || res.status >= 500;
+      if (!retryable || attempt === maxRetries) {
+        throw new Error(`ElevenLabs TTS failed (${res.status} ${res.statusText}): ${detail.slice(0, 300)}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000 * 2 ** attempt));
     }
-
-    const buffer = Buffer.from(await res.arrayBuffer());
-    await writeFile(outputPath, buffer);
   }
 }

@@ -27,7 +27,14 @@ export async function runGenerate(params: {
 
   if (config.narration.enabled) {
     logger.info("=== Stage 2.5: narrate ===");
-    await narrate({ manifestPath: paths.manifestPath, config, paths, logger });
+    try {
+      await narrate({ manifestPath: paths.manifestPath, config, paths, logger });
+    } catch (err) {
+      // Don't discard a completed capture over a narration failure (e.g. a voice still
+      // fine-tuning, a bad key, or an API hiccup). Warn and assemble a silent video; the
+      // narrate stage can be re-run against the manifest later without re-capturing.
+      logger.warn(`Narration failed; assembling without voice-over: ${(err as Error).message}`);
+    }
   }
 
   logger.info("=== Stage 3: assemble ===");
