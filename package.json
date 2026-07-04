@@ -4,13 +4,9 @@
   "description": "Generate a product demo video from a merged PR, using an LLM-driven browser agent and Hyperframes.",
   "type": "module",
   "private": true,
-  "bin": {
-    "demo-gen": "./dist/cli/index.js"
-  },
   "scripts": {
-    "build": "tsc -p tsconfig.json && chmod +x dist/cli/index.js",
-    "prepare": "npm run build",
-    "dev": "tsx src/cli/index.ts",
+    "demo-gen": "tsx src/cli/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "sample-app": "node examples/sample-app/server.js"
   },
   "engines": {

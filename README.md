@@ -21,11 +21,23 @@ An optional **narrate** stage (2.5) sits between capture and assemble: it synthe
 ## Install
 
 ```bash
-npm install          # also runs the build via the prepare script
-npm link             # makes `demo-gen` available as a global command
+npm install
+npx playwright install chromium   # once
 ```
 
-Provide your API key by either exporting it, or putting it in a `.env` file in the directory you run `demo-gen` from (auto-loaded, gitignored):
+The CLI runs straight from TypeScript source via `tsx` (no build step), so edits take effect immediately. Invoke it with:
+
+```bash
+npm run demo-gen -- <command> [options]
+```
+
+If you want a shorter command, add a shell alias (adjust the path):
+
+```bash
+alias demo-gen='npm run --silent --prefix /path/to/awesome_demos demo-gen --'
+```
+
+Provide your API key by exporting it, or putting it in a `.env` file at the project root (auto-loaded, gitignored):
 
 ```bash
 cp .env.example .env    # then fill in ANTHROPIC_API_KEY
@@ -33,7 +45,7 @@ cp .env.example .env    # then fill in ANTHROPIC_API_KEY
 
 ## Configure
 
-`demo-gen` targets one app at a time via `demo-gen.config.json` in your working directory. Key fields:
+The tool targets one app at a time via `demo-gen.config.json` in your working directory. Key fields:
 
 - `app.baseUrl` / `app.startPath` — where your app runs and where a demo run begins
 - `app.viewport` — capture resolution (default 1280×720; keep it 16:9 to fill the 1920×1080 video without letterboxing)
@@ -53,7 +65,7 @@ See the checked-in `demo-gen.config.json` (configured for the bundled fixture ap
 Run the whole pipeline for a PR:
 
 ```bash
-demo-gen generate --pr https://github.com/owner/repo/pull/123
+npm run demo-gen -- generate --pr https://github.com/owner/repo/pull/123
 ```
 
 `--pr` accepts a GitHub PR URL/number (fetched via `gh`) **or** a path to a local PR fixture JSON file. Each run writes to `runs/<run-id>/` (demo script, manifest, clips, screenshots, the Hyperframes project, `demo.mp4`, and a `run.log`).
@@ -61,10 +73,10 @@ demo-gen generate --pr https://github.com/owner/repo/pull/123
 The stages can also be run individually — useful for iterating without re-spending on earlier stages:
 
 ```bash
-demo-gen analyze  --pr <ref>          --out demo-script.json
-demo-gen capture  --script demo-script.json --out manifest.json
-demo-gen narrate  --manifest manifest.json                 # optional; needs ELEVENLABS_API_KEY + voiceId
-demo-gen assemble --manifest manifest.json --script demo-script.json --out demo.mp4
+npm run demo-gen -- analyze  --pr <ref>          --out demo-script.json
+npm run demo-gen -- capture  --script demo-script.json --out manifest.json
+npm run demo-gen -- narrate  --manifest manifest.json                 # optional; needs ELEVENLABS_API_KEY + voiceId
+npm run demo-gen -- assemble --manifest manifest.json --script demo-script.json --out demo.mp4
 ```
 
 ### Narration (optional)
@@ -88,7 +100,7 @@ and put `ELEVENLABS_API_KEY` in your `.env`. When enabled, `generate` runs the n
 # 1. start the fixture app (a tiny todo app with a CSV-export feature)
 cd examples/sample-app && npm install && node server.js   # http://localhost:4000
 # 2. in another shell, from the repo root:
-demo-gen generate --pr fixtures/sample-pr.json
+npm run demo-gen -- generate --pr fixtures/sample-pr.json
 ```
 
 Open the resulting `runs/<run-id>/demo.mp4`.
