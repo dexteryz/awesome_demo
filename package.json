@@ -1,0 +1,31 @@
+{
+  "name": "demo-gen",
+  "version": "0.1.0",
+  "description": "Generate a product demo video from a merged PR, using an LLM-driven browser agent and Hyperframes.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "demo-gen": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/cli/index.js",
+    "prepare": "npm run build",
+    "dev": "tsx src/cli/index.ts",
+    "sample-app": "node examples/sample-app/server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "commander": "^13.1.0",
+    "playwright": "^1.49.0",
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "demo-gen-sample-app",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Minimal fixture app used to validate the demo-gen pipeline end to end.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

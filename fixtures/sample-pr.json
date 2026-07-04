@@ -1,0 +1,12 @@
+{
+  "title": "Add CSV export to the Todos page",
+  "url": "https://github.com/example-org/demo-todo-app/pull/482",
+  "body": "## Summary\nTeam admins keep asking for a way to get their todo list out of the app for reporting. This adds a one-click CSV export from the Todos page.\n\n## What changed\n- New `GET /todos/export.csv` endpoint that streams the current todo list as CSV (id, text, done).\n- New \"Export to CSV\" button on the Todos page. Clicking it downloads the file and shows a confirmation banner (\"Exported!\") so the user knows it worked.\n\n## Why\nCloses the recurring support request for offline/spreadsheet access to todos.\n",
+  "linkedIssues": [
+    {
+      "title": "Users want to export their todos to a spreadsheet",
+      "body": "Several users have asked for a way to get their todo list into Excel/Sheets for reporting to their managers. We should support a simple CSV export from the Todos page."
+    }
+  ],
+  "diff": "diff --git a/server.js b/server.js\nindex 1234567..89abcde 100644\n--- a/server.js\n+++ b/server.js\n@@ -20,10 +20,29 @@ app.get('/todos', (req, res) => {\n   const items = todos\n     .map((t) => `<li class=\"${t.done ? 'done' : ''}\">${t.text}</li>`)\n     .join('\\n');\n   res.send(\n     layout(\n       'Your Todos',\n       `<h1>Your Todos</h1>\n        <ul>${items}</ul>\n+       <button id=\"export-btn\" type=\"button\">Export to CSV</button>\n+       <div id=\"export-banner\">Exported!</div>\n+       <script>\n+         document.getElementById('export-btn').addEventListener('click', async () => {\n+           const res = await fetch('/todos/export.csv');\n+           const blob = await res.blob();\n+           const url = URL.createObjectURL(blob);\n+           const a = document.createElement('a');\n+           a.href = url;\n+           a.download = 'todos.csv';\n+           document.body.appendChild(a);\n+           a.click();\n+           a.remove();\n+           URL.revokeObjectURL(url);\n+           document.getElementById('export-banner').style.display = 'block';\n+         });\n+       </script>`\n     )\n   );\n });\n+\n+app.get('/todos/export.csv', (req, res) => {\n+  const header = 'id,text,done';\n+  const rows = todos.map((t) => `${t.id},\"${t.text.replace(/\"/g, '\"\"')}\",${t.done}`);\n+  const csv = [header, ...rows].join('\\n');\n+  res.setHeader('Content-Type', 'text/csv');\n+  res.setHeader('Content-Disposition', 'attachment; filename=todos.csv');\n+  res.send(csv);\n+});\n"
+}

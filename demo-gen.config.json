@@ -1,0 +1,42 @@
+{
+  "app": {
+    "name": "Demo Todo App (fixture)",
+    "baseUrl": "http://localhost:4000",
+    "startPath": "/",
+    "viewport": { "width": 1280, "height": 720 }
+  },
+  "auth": {
+    "seedSteps": [],
+    "envVars": []
+  },
+  "models": {
+    "prAnalysis": { "model": "claude-opus-4-8", "maxTokens": 4096 },
+    "browserAgent": { "model": "claude-sonnet-4-6", "maxTokens": 1024 }
+  },
+  "capture": {
+    "maxRetriesPerStep": 3,
+    "maxTurnsPerStep": 12,
+    "headless": true,
+    "video": { "width": 1280, "height": 720 },
+    "fallbackStepDurationSec": 3,
+    "tighten": {
+      "enabled": true,
+      "targetStepDurationSec": 4,
+      "minStepDurationSec": 2.5,
+      "removeIdleFrames": false
+    }
+  },
+  "output": {
+    "runsDir": "./runs"
+  },
+  "hyperframes": {
+    "outputFile": "demo.mp4",
+    "hideCaptionsWhenNarrated": true
+  },
+  "narration": {
+    "enabled": false
+  },
+  "github": {
+    "repo": null
+  }
+}
