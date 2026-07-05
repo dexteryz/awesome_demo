@@ -38,7 +38,11 @@
     "enabled": false,
     "provider": "elevenlabs",
     "voiceId": null,
-    "modelId": "eleven_multilingual_v2"
+    "modelId": "eleven_multilingual_v2",
+    "pronunciations": [
+      { "from": "Todos", "to": "to-do's" },
+      { "from": "todo", "to": "to-do" }
+    ]
   },
   "github": {
     "repo": null

@@ -35,7 +35,9 @@ export async function narrate(params: {
 
     const audioPath = join(paths.audioDir, `${step.id}.mp3`);
     logger.info(`Synthesizing narration for ${step.id}`);
-    await provider.synthesizeToFile(step.narrationText, audioPath);
+    // Rewrite the spoken text for pronunciation only; the caption still shows the original wording.
+    const spokenText = applyPronunciations(step.narrationText, config.narration.pronunciations);
+    await provider.synthesizeToFile(spokenText, audioPath);
     const audioDurationMs = await getMediaDurationMs(audioPath);
 
     step.audioPath = audioPath;
@@ -63,6 +65,16 @@ export async function narrate(params: {
   await writeManifest(manifestPath, manifest);
   logger.info(`Narration complete; updated manifest at ${manifestPath}`);
   return manifest;
+}
+
+/** Applies whole-word, case-insensitive pronunciation rewrites to the spoken text (TTS input only). */
+function applyPronunciations(text: string, rules: { from: string; to: string }[]): string {
+  let out = text;
+  for (const { from, to } of rules) {
+    const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp(`\\b${escaped}\\b`, "gi"), to);
+  }
+  return out;
 }
 
 function createProvider(config: Config): TtsProvider {

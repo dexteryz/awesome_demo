@@ -79,6 +79,11 @@ export const ConfigSchema = z.object({
       provider: z.enum(["elevenlabs"]).default("elevenlabs"),
       voiceId: z.string().nullable().default(null),
       modelId: z.string().default("eleven_multilingual_v2"),
+      // Whole-word rewrites applied to the spoken text only (not the on-screen caption), to fix
+      // TTS mispronunciations — e.g. { from: "Todos", to: "to-do's" } so it says "to-do"s.
+      pronunciations: z
+        .array(z.object({ from: z.string(), to: z.string() }))
+        .default([]),
     })
     .default({}),
   github: z
