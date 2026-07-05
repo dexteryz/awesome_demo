@@ -79,6 +79,9 @@ export const ConfigSchema = z.object({
       provider: z.enum(["elevenlabs"]).default("elevenlabs"),
       voiceId: z.string().nullable().default(null),
       modelId: z.string().default("eleven_multilingual_v2"),
+      // Word-synced ("karaoke") captions: each word highlights as it's spoken, using ElevenLabs'
+      // per-character timing. Falls back to a static subtitle if timing is unavailable.
+      wordSync: z.boolean().default(true),
       // Whole-word rewrites applied to the spoken text only (not the on-screen caption), to fix
       // TTS mispronunciations — e.g. { from: "Todos", to: "to-do's" } so it says "to-do"s.
       pronunciations: z

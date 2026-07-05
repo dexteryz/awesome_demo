@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { CaptureManifestSchema, writeManifest, type CaptureManifest } from "../browser-agent/manifest.js";
 import { padToDuration } from "../browser-agent/pace-clip.js";
 import { getMediaDurationMs } from "../shared/ffprobe.js";
-import { ElevenLabsProvider, type TtsProvider } from "./elevenlabs.js";
+import { ElevenLabsProvider, type Alignment, type TtsProvider } from "./elevenlabs.js";
 import type { Config } from "../cli/config.js";
 import type { RunLogger } from "../shared/logger.js";
 import type { RunPaths } from "../shared/paths.js";
@@ -37,11 +37,20 @@ export async function narrate(params: {
     logger.info(`Synthesizing narration for ${step.id}`);
     // Rewrite the spoken text for pronunciation only; the caption still shows the original wording.
     const spokenText = applyPronunciations(step.narrationText, config.narration.pronunciations);
-    await provider.synthesizeToFile(spokenText, audioPath);
+
+    let captionWords: { text: string; startSec: number }[] | null = null;
+    if (config.narration.wordSync && provider.synthesizeToFileWithTimestamps) {
+      const alignment = await provider.synthesizeToFileWithTimestamps(spokenText, audioPath);
+      if (alignment) captionWords = wordTimings(alignment, step.narrationText);
+    } else {
+      await provider.synthesizeToFile(spokenText, audioPath);
+    }
     const audioDurationMs = await getMediaDurationMs(audioPath);
 
     step.audioPath = audioPath;
     step.audioDurationMs = audioDurationMs;
+    step.captionWords = captionWords;
+    if (captionWords) logger.info(`  ${step.id}: ${captionWords.length} word timings for karaoke caption`);
 
     // Match the video to the voice by stretching the HOLD only — never touch the motion. The clip
     // is already paced to its action windows (glide at 1x); if the voice line is longer, hold the
@@ -65,6 +74,36 @@ export async function narrate(params: {
   await writeManifest(manifestPath, manifest);
   logger.info(`Narration complete; updated manifest at ${manifestPath}`);
   return manifest;
+}
+
+/**
+ * Turns ElevenLabs per-character timing into per-word start times for the DISPLAYED caption. The
+ * alignment is for the spoken (pronunciation-adjusted) text, so we aggregate its characters into
+ * spoken words and pair them by index with the caption's words — pronunciation rewrites are
+ * whole-word and space-free, so the token counts match. If they don't, we distribute evenly.
+ */
+function wordTimings(alignment: Alignment, displayedText: string): { text: string; startSec: number }[] {
+  const displayed = displayedText.split(/\s+/).filter(Boolean);
+
+  const spokenStarts: number[] = [];
+  let inWord = false;
+  const { characters, character_start_times_seconds: starts } = alignment;
+  for (let i = 0; i < characters.length; i++) {
+    const isSpace = /\s/.test(characters[i]);
+    if (!isSpace && !inWord) {
+      spokenStarts.push(starts[i]);
+      inWord = true;
+    } else if (isSpace) {
+      inWord = false;
+    }
+  }
+
+  const lastEnd = alignment.character_end_times_seconds[alignment.character_end_times_seconds.length - 1] ?? 0;
+  if (spokenStarts.length === displayed.length) {
+    return displayed.map((text, i) => ({ text, startSec: spokenStarts[i] }));
+  }
+  // Token counts diverged — space the caption words evenly across the audio as a graceful fallback.
+  return displayed.map((text, i) => ({ text, startSec: (lastEnd * i) / displayed.length }));
 }
 
 /** Applies whole-word, case-insensitive pronunciation rewrites to the spoken text (TTS input only). */

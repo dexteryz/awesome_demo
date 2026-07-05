@@ -176,6 +176,7 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
         clipDurationMs,
         audioPath: null,
         audioDurationMs: null,
+        captionWords: null,
         screenshotBefore,
         screenshotAfter,
         endUrl,

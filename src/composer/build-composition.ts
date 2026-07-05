@@ -5,6 +5,7 @@ import type { CaptureManifest } from "../browser-agent/manifest.js";
 import { introCardHtml } from "./templates/intro-card.html.js";
 import { outroCardHtml } from "./templates/outro-card.html.js";
 import { successStepHtml, failedStepFallbackHtml } from "./templates/step-segment.html.js";
+import { escapeHtml } from "./html-utils.js";
 
 const WIDTH = 1920;
 const HEIGHT = 1080;
@@ -39,6 +40,10 @@ export async function buildComposition(params: {
 
   let currentTime = INTRO_DURATION_SEC;
   const segments: string[] = [];
+  // GSAP tweens (added to the seeked timeline) that highlight each caption word as it's spoken.
+  const karaokeTweens: string[] = [];
+  const KARAOKE_DIM = "rgba(255,255,255,0.45)";
+  const KARAOKE_BRIGHT = "#ffffff";
 
   for (const manifestStep of manifest.steps) {
     const demoStep = stepsById.get(manifestStep.id);
@@ -65,12 +70,28 @@ export async function buildComposition(params: {
       const assetFileName = `${manifestStep.id}${extname(manifestStep.clipPath)}`;
       await copyFile(manifestStep.clipPath, join(assetsDir, assetFileName));
 
+      // Word-synced caption: render each word as a dim span and add a GSAP tween that brightens it
+      // at its spoken time (relative to the segment/audio start). Falls back to the plain subtitle.
+      let captionInnerHtml: string | undefined;
+      if (showCaption && audioSrc && manifestStep.captionWords?.length) {
+        captionInnerHtml = manifestStep.captionWords
+          .map((w, i) => `<span id="kw-${manifestStep.id}-${i}" style="color:${KARAOKE_DIM}">${escapeHtml(w.text)}</span>`)
+          .join(" ");
+        for (let i = 0; i < manifestStep.captionWords.length; i++) {
+          const at = (currentTime + manifestStep.captionWords[i].startSec).toFixed(3);
+          karaokeTweens.push(
+            `t.to("#kw-${manifestStep.id}-${i}",{color:"${KARAOKE_BRIGHT}",duration:0.14},${at});`
+          );
+        }
+      }
+
       segments.push(
         successStepHtml({
           start: currentTime,
           duration: durationSec,
           clipSrc: `assets/${assetFileName}`,
           captionText,
+          captionInnerHtml,
           audioSrc,
           showCaption,
         })
@@ -121,7 +142,9 @@ export async function buildComposition(params: {
 
     <script>
       window.__timelines = window.__timelines || {};
-      window.__timelines["root"] = gsap.timeline({ paused: true });
+      const t = gsap.timeline({ paused: true });
+      ${karaokeTweens.join("\n      ")}
+      window.__timelines["root"] = t;
     </script>
   </body>
 </html>

@@ -12,8 +12,17 @@ export interface TtsConfig {
  * on this interface (not ElevenLabs directly) so another provider can be dropped in later without
  * touching the pipeline.
  */
+/** Per-character timing returned by ElevenLabs' with-timestamps endpoint. */
+export interface Alignment {
+  characters: string[];
+  character_start_times_seconds: number[];
+  character_end_times_seconds: number[];
+}
+
 export interface TtsProvider {
   synthesizeToFile(text: string, outputPath: string): Promise<void>;
+  /** Synthesize and also return per-character alignment for word-synced captions, if supported. */
+  synthesizeToFileWithTimestamps?(text: string, outputPath: string): Promise<Alignment | null>;
 }
 
 export class ElevenLabsProvider implements TtsProvider {
@@ -38,26 +47,27 @@ export class ElevenLabsProvider implements TtsProvider {
   }
 
   async synthesizeToFile(text: string, outputPath: string): Promise<void> {
+    const res = await this.request("", text, "audio/mpeg");
+    await writeFile(outputPath, Buffer.from(await res.arrayBuffer()));
+  }
+
+  async synthesizeToFileWithTimestamps(text: string, outputPath: string): Promise<Alignment | null> {
+    const res = await this.request("/with-timestamps", text, "application/json");
+    const body = (await res.json()) as { audio_base64: string; alignment: Alignment };
+    await writeFile(outputPath, Buffer.from(body.audio_base64, "base64"));
+    return body.alignment ?? null;
+  }
+
+  private async request(pathSuffix: string, text: string, accept: string): Promise<Response> {
+    const url = `${ELEVENLABS_TTS_URL}/${this.config.voiceId}${pathSuffix}`;
     const maxRetries = 4;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const res = await fetch(`${ELEVENLABS_TTS_URL}/${this.config.voiceId}`, {
+      const res = await fetch(url, {
         method: "POST",
-        headers: {
-          "xi-api-key": this.apiKey,
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text,
-          model_id: this.config.modelId,
-        }),
+        headers: { "xi-api-key": this.apiKey, "Content-Type": "application/json", Accept: accept },
+        body: JSON.stringify({ text, model_id: this.config.modelId }),
       });
-
-      if (res.ok) {
-        const buffer = Buffer.from(await res.arrayBuffer());
-        await writeFile(outputPath, buffer);
-        return;
-      }
+      if (res.ok) return res;
 
       const detail = await res.text().catch(() => "");
       // 429 "system_busy" and 5xx are transient — back off and retry. 4xx (bad key/voice) are not.
@@ -67,5 +77,6 @@ export class ElevenLabsProvider implements TtsProvider {
       }
       await new Promise((resolve) => setTimeout(resolve, 2000 * 2 ** attempt));
     }
+    throw new Error("unreachable");
   }
 }

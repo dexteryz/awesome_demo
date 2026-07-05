@@ -10,17 +10,20 @@ export function successStepHtml(params: {
   duration: number;
   clipSrc: string;
   captionText: string;
+  captionInnerHtml?: string;
   audioSrc?: string;
   showCaption: boolean;
 }): string {
-  const { start, duration, clipSrc, captionText, audioSrc, showCaption } = params;
+  const { start, duration, clipSrc, captionText, captionInnerHtml, audioSrc, showCaption } = params;
   const audioTag = audioSrc
     ? `\n      <audio class="clip" data-start="${start}" data-duration="${duration}" data-volume="1.0"
              src="${escapeHtml(audioSrc)}"></audio>`
     : "";
+  // captionInnerHtml (word-sync spans) is pre-escaped by the caller; plain captionText is escaped here.
+  const captionBody = captionInnerHtml ?? escapeHtml(captionText);
   const captionTag = showCaption
     ? `\n      <div class="clip" data-start="${start}" data-duration="${duration}" data-track-index="1"
-           style="${CAPTION_STYLE}">${escapeHtml(captionText)}</div>`
+           style="${CAPTION_STYLE}">${captionBody}</div>`
     : "";
   return `
       <video class="clip" data-start="${start}" data-duration="${duration}" data-track-index="0"

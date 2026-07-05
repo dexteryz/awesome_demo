@@ -22,6 +22,11 @@ export const ManifestStepSchema = z.object({
   // Populated by the narrate stage (Stage 2.5); absent until then.
   audioPath: z.string().nullable().default(null),
   audioDurationMs: z.number().nullable().default(null),
+  // Per-word caption timing (word-sync / karaoke). startSec is relative to the audio start.
+  captionWords: z
+    .array(z.object({ text: z.string(), startSec: z.number() }))
+    .nullable()
+    .default(null),
   screenshotBefore: z.string().nullable(),
   screenshotAfter: z.string().nullable(),
   endUrl: z.string(),

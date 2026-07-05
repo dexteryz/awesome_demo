@@ -100,6 +100,10 @@ Set in `demo-gen.config.json`:
 
 and put `ELEVENLABS_API_KEY` in your `.env`. When enabled, `generate` runs the narrate stage automatically. Each step's clip is held to its voice line's length (the motion is never sped up — only the final frame is held longer to fill the voice line). Captions are kept alongside the voice by default; set `hyperframes.hideCaptionsWhenNarrated: true` to drop the on-screen text when narration is present.
 
+Other `narration` options:
+- `wordSync` (default true) — word-synced "karaoke" captions: each word brightens as it's spoken, using ElevenLabs' per-character timing (the `with-timestamps` endpoint) driven by a seeked GSAP timeline. Set false for a plain static subtitle.
+- `pronunciations` — a list of whole-word `{ from, to }` rewrites applied to the **spoken** text only (the caption keeps the original spelling), to fix TTS mispronunciations. E.g. `{ "from": "Todos", "to": "to-do's" }`.
+
 ## Try it against the bundled fixture
 
 ```bash
