@@ -93,12 +93,12 @@ Set in `demo-gen.config.json`:
 "narration": {
   "enabled": true,
   "provider": "elevenlabs",
-  "voiceId": "<your ElevenLabs voice id>",   // a cloned voice of yourself, or a stock voice
+  "voiceId": "${ELEVENLABS_VOICE_ID}",   // ${...} resolves from env; or inline a literal voice id
   "modelId": "eleven_multilingual_v2"
 }
 ```
 
-and put `ELEVENLABS_API_KEY` in your `.env`. When enabled, `generate` runs the narrate stage automatically. Each step's clip is held to its voice line's length (the motion is never sped up — only the final frame is held longer to fill the voice line). Captions are kept alongside the voice by default; set `hyperframes.hideCaptionsWhenNarrated: true` to drop the on-screen text when narration is present.
+The `voiceId` supports `${ENV_VAR}` references (same convention as `auth` seed steps), so you can keep your personal voice id in `.env` (`ELEVENLABS_VOICE_ID=…`) rather than the committed config. Put `ELEVENLABS_API_KEY` in your `.env` too. The on/off toggle can also come from `.env` via `NARRATION_ENABLED=true`. When enabled, `generate` runs the narrate stage automatically. Each step's clip is held to its voice line's length (the motion is never sped up — only the final frame is held longer to fill the voice line). Captions are kept alongside the voice by default; set `hyperframes.hideCaptionsWhenNarrated: true` to drop the on-screen text when narration is present.
 
 Other `narration` options:
 - `wordSync` (default true) — word-synced "karaoke" captions: each word brightens as it's spoken, using ElevenLabs' per-character timing (the `with-timestamps` endpoint) driven by a seeked GSAP timeline. Set false for a plain static subtitle.

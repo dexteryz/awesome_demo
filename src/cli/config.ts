@@ -102,11 +102,19 @@ export function loadConfig(path: string): Config {
   const raw = JSON.parse(readFileSync(path, "utf8"));
   const config = ConfigSchema.parse(raw);
 
-  // Env overrides let personal/local narration settings live in .env (gitignored) instead of the
-  // checked-in config, so a voice id or "on" switch never lands in the committed template.
-  if (process.env.ELEVENLABS_VOICE_ID) {
-    config.narration.voiceId = process.env.ELEVENLABS_VOICE_ID;
+  // Resolve ${ENV_VAR} references in the voice id (same convention as auth seed steps), so the
+  // config can point at .env — e.g. "voiceId": "${ELEVENLABS_VOICE_ID}" — keeping the personal id
+  // out of the checked-in file while staying self-documenting. An unset var resolves to null.
+  if (config.narration.voiceId) {
+    const resolved = config.narration.voiceId.replace(
+      /\$\{([A-Z0-9_]+)\}/g,
+      (_, name: string) => process.env[name] ?? ""
+    );
+    config.narration.voiceId = resolved.length > 0 ? resolved : null;
   }
+
+  // The on/off toggle is a boolean, which has no natural ${...} form, so it stays an env override
+  // (NARRATION_ENABLED) letting narration be switched on from .env without editing the template.
   if (process.env.NARRATION_ENABLED !== undefined) {
     config.narration.enabled = process.env.NARRATION_ENABLED === "true";
   }

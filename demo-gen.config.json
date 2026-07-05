@@ -37,7 +37,7 @@
   "narration": {
     "enabled": false,
     "provider": "elevenlabs",
-    "voiceId": null,
+    "voiceId": "${ELEVENLABS_VOICE_ID}",
     "modelId": "eleven_multilingual_v2",
     "pronunciations": [
       { "from": "Todos", "to": "to-do's" },
