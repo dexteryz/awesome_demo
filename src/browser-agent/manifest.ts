@@ -17,8 +17,7 @@ export const ManifestStepSchema = z.object({
   narrationText: z.string(),
   clipPath: z.string().nullable(),
   clipDurationMs: z.number().nullable(),
-  // Untouched recording, kept so the narrate stage can re-pace the clip to its voice-line length
-  // from source rather than re-processing the already-tightened clip.
+  // Untouched full recording, kept for debugging alongside the paced clip in clipPath.
   rawClipPath: z.string().nullable().default(null),
   // Populated by the narrate stage (Stage 2.5); absent until then.
   audioPath: z.string().nullable().default(null),

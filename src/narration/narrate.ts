@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { CaptureManifestSchema, writeManifest, type CaptureManifest } from "../browser-agent/manifest.js";
-import { tightenClip } from "../browser-agent/tighten-clip.js";
+import { padToDuration } from "../browser-agent/pace-clip.js";
 import { getMediaDurationMs } from "../shared/ffprobe.js";
 import { ElevenLabsProvider, type TtsProvider } from "./elevenlabs.js";
 import type { Config } from "../cli/config.js";
@@ -13,7 +13,7 @@ import type { RunPaths } from "../shared/paths.js";
  * video to match its narration length so audio and picture line up by construction (a long line
  * gets a longer clip, a short line a shorter one) — rather than both being pinned to a fixed
  * duration. Purely additive: it only fills in the manifest's audioPath/audioDurationMs (and
- * re-tightens clipPath/clipDurationMs to the voice length); analyze and capture are untouched.
+ * holds clipPath/clipDurationMs to the voice length); analyze and capture are untouched.
  */
 export async function narrate(params: {
   manifestPath: string;
@@ -41,26 +41,21 @@ export async function narrate(params: {
     step.audioPath = audioPath;
     step.audioDurationMs = audioDurationMs;
 
-    // Re-pace the video to the voice length. Setting target == min forces the clip to the audio
-    // duration (speed up if longer, hold last frame if shorter). Only possible for captured steps.
-    if (step.rawClipPath && audioDurationMs) {
+    // Match the video to the voice by stretching the HOLD only — never touch the motion. The clip
+    // is already paced to its action windows (glide at 1x); if the voice line is longer, hold the
+    // final frame to fill it. If the clip is already longer, leave it and the audio finishes first.
+    if (step.clipPath && audioDurationMs) {
       const audioSec = audioDurationMs / 1000;
       const narratedClip = join(paths.clipsDir, `${step.id}.narrated.mp4`);
-      const retimed = await tightenClip(step.rawClipPath, narratedClip, {
-        targetStepDurationSec: audioSec,
-        minStepDurationSec: audioSec,
-        removeIdleFrames: config.capture.tighten.removeIdleFrames,
-      });
+      const retimed = await padToDuration(step.clipPath, narratedClip, audioSec);
       if (retimed) {
         logger.info(
-          `  ${step.id}: narration ${audioSec.toFixed(1)}s, clip re-paced to ${(
-            retimed.durationMs / 1000
-          ).toFixed(1)}s`
+          `  ${step.id}: narration ${audioSec.toFixed(1)}s, clip held to ${(retimed.durationMs / 1000).toFixed(1)}s`
         );
         step.clipPath = retimed.path;
         step.clipDurationMs = retimed.durationMs;
       } else {
-        logger.warn(`Re-pacing clip to narration failed for ${step.id}; keeping existing clip`);
+        logger.warn(`Holding clip to narration failed for ${step.id}; keeping existing clip`);
       }
     }
   }

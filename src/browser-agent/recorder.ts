@@ -4,6 +4,8 @@ import { CURSOR_INIT_SCRIPT } from "./cursor.js";
 export interface StepRecordingHandle {
   context: BrowserContext;
   page: Page;
+  /** Wall-clock time (ms) recording began, for mapping action timestamps to video time. */
+  recordStartMs: number;
 }
 
 /**
@@ -22,6 +24,7 @@ export async function openStepContext(
     injectCursor?: boolean;
   }
 ): Promise<StepRecordingHandle> {
+  const recordStartMs = Date.now();
   const context = await browser.newContext({
     storageState: params.storageStatePath,
     viewport: params.viewport,
@@ -37,7 +40,7 @@ export async function openStepContext(
     // matching where the injected cursor initializes (no jump from the 0,0 corner).
     await page.mouse.move(params.viewport.width / 2, params.viewport.height / 2);
   }
-  return { context, page };
+  return { context, page, recordStartMs };
 }
 
 /** Closes the context (finalizing the video file to disk) and returns the resulting video path, if any. */

@@ -6,7 +6,7 @@ import { DemoScriptSchema, type DemoScript } from "../../pr-analysis/schema.js";
 import { runSeedSteps } from "../../browser-agent/session.js";
 import { openStepContext, closeStepContext } from "../../browser-agent/recorder.js";
 import { runStepAgentLoop } from "../../browser-agent/agent-loop.js";
-import { tightenClip } from "../../browser-agent/tighten-clip.js";
+import { paceClipToActions, type ActionSpan } from "../../browser-agent/pace-clip.js";
 import { writeManifest, type CaptureManifest, type ManifestStep } from "../../browser-agent/manifest.js";
 import type { RunLogger } from "../../shared/logger.js";
 import type { RunPaths } from "../../shared/paths.js";
@@ -40,6 +40,7 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
   const motion = cursorEnabled
     ? {
         moveSteps: config.capture.cursor.moveSteps,
+        moveDurationMs: config.capture.cursor.moveDurationMs,
         clickPauseMs: config.capture.cursor.clickPauseMs,
         typeDelayMs: config.capture.cursor.typeDelayMs,
       }
@@ -85,6 +86,8 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
         });
 
         let recordedVideoPath: string | null = null;
+        let actionSpans: ActionSpan[] = [];
+        const recordStartMs = handle.recordStartMs;
         try {
           await handle.page.goto(endUrl, { waitUntil: "networkidle", timeout: 15000 });
 
@@ -106,6 +109,7 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
           success = result.success;
           reason = result.reason;
           toolCallLog = result.toolCallLog;
+          actionSpans = result.actionSpans;
           screenshotBefore = beforePath;
           screenshotAfter = afterPath;
           stepEndUrl = handle.page.url();
@@ -121,24 +125,31 @@ export async function captureDemo(options: CaptureOptions): Promise<CaptureManif
             clipPath = finalRawPath;
             clipDurationMs = await getMediaDurationMs(finalRawPath);
 
-            // Strip the dead air from recording per-turn API latency and pace the clip. Falls back
-            // to the raw clip if ffmpeg fails so a step is never lost to post-processing.
-            if (config.capture.tighten.enabled) {
-              const tightened = await tightenClip(finalRawPath, join(paths.clipsDir, `${step.id}.mp4`), {
-                targetStepDurationSec: config.capture.tighten.targetStepDurationSec,
-                minStepDurationSec: config.capture.tighten.minStepDurationSec,
-                removeIdleFrames: config.capture.tighten.removeIdleFrames,
-              });
-              if (tightened) {
+            // Remove the Claude-thinking dead air by keeping only the windows around real actions,
+            // preserving the cursor glide at true 1x. Falls back to the raw clip if ffmpeg fails.
+            if (config.capture.pace.enabled) {
+              const paced = await paceClipToActions(
+                finalRawPath,
+                join(paths.clipsDir, `${step.id}.mp4`),
+                actionSpans,
+                recordStartMs,
+                {
+                  prerollSec: config.capture.pace.prerollSec,
+                  holdSec: config.capture.pace.holdSec,
+                  gapMergeSec: config.capture.pace.gapMergeSec,
+                  minSec: config.capture.pace.minStepDurationSec,
+                }
+              );
+              if (paced) {
                 logger.info(
-                  `  tightened ${step.id}: ${((clipDurationMs ?? 0) / 1000).toFixed(1)}s -> ${(
-                    tightened.durationMs / 1000
-                  ).toFixed(1)}s`
+                  `  paced ${step.id}: ${((clipDurationMs ?? 0) / 1000).toFixed(1)}s -> ${(
+                    paced.durationMs / 1000
+                  ).toFixed(1)}s (${actionSpans.length} action window(s))`
                 );
-                clipPath = tightened.path;
-                clipDurationMs = tightened.durationMs;
+                clipPath = paced.path;
+                clipDurationMs = paced.durationMs;
               } else {
-                logger.warn(`Tighten pass failed for ${step.id}; keeping raw clip`);
+                logger.warn(`Pace pass failed for ${step.id}; keeping raw clip`);
               }
             }
           } catch (err) {

@@ -19,11 +19,12 @@
     "headless": true,
     "video": { "width": 1280, "height": 720 },
     "fallbackStepDurationSec": 3,
-    "tighten": {
+    "pace": {
       "enabled": true,
-      "targetStepDurationSec": 4,
-      "minStepDurationSec": 2.5,
-      "removeIdleFrames": false
+      "prerollSec": 0.5,
+      "holdSec": 1.4,
+      "gapMergeSec": 0.4,
+      "minStepDurationSec": 2.5
     }
   },
   "output": {

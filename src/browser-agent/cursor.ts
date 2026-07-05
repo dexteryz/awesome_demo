@@ -1,8 +1,10 @@
 import type { Locator, Page } from "playwright";
 
 export interface CursorMotion {
-  /** Interpolation steps for a pointer glide — more steps = smoother, slower movement. */
+  /** Interpolation steps for a pointer glide — more steps = smoother movement. */
   moveSteps: number;
+  /** Wall-clock duration of the glide. Playwright's mouse.move has no inter-step delay, so we time it ourselves. */
+  moveDurationMs: number;
   /** Pause after the pointer arrives, before clicking, so a viewer registers the target. */
   clickPauseMs: number;
   /** Per-character delay when typing, for realistic keystrokes. */
@@ -69,10 +71,38 @@ export async function humanType(
   if (submit) await locator.press("Enter");
 }
 
+// Playwright doesn't expose the virtual pointer's position, so we track where we left it (seeded at
+// viewport center by the recorder) to interpolate the next glide's starting point.
+const lastPointer = new WeakMap<Page, { x: number; y: number }>();
+
+function pointerFrom(page: Page): { x: number; y: number } {
+  const existing = lastPointer.get(page);
+  if (existing) return existing;
+  const vp = page.viewportSize() ?? { width: 1280, height: 720 };
+  return { x: vp.width / 2, y: vp.height / 2 };
+}
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 async function glideTo(page: Page, locator: Locator, motion: CursorMotion): Promise<void> {
   await locator.scrollIntoViewIfNeeded().catch(() => {});
   const box = await locator.boundingBox();
   if (!box) return;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: motion.moveSteps });
+  const from = pointerFrom(page);
+  const tx = box.x + box.width / 2;
+  const ty = box.y + box.height / 2;
+
+  // Manual, eased, wall-clock-timed glide: mouse.move steps fire with no delay, so we step and
+  // wait ourselves. Easing gives a natural slow-start/slow-stop instead of a linear slide.
+  const steps = Math.max(2, motion.moveSteps);
+  const perStepMs = motion.moveDurationMs / steps;
+  for (let i = 1; i <= steps; i++) {
+    const e = easeInOutCubic(i / steps);
+    await page.mouse.move(from.x + (tx - from.x) * e, from.y + (ty - from.y) * e);
+    await page.waitForTimeout(perStepMs);
+  }
+  lastPointer.set(page, { x: tx, y: ty });
   await page.waitForTimeout(motion.clickPauseMs);
 }

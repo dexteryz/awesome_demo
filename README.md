@@ -52,10 +52,11 @@ The tool targets one app at a time via `demo-gen.config.json` in your working di
 - `auth.seedSteps` — optional login steps run once before capture (secrets referenced as `${ENV_VAR}`, listed in `auth.envVars`, never stored in the file)
 - `models.prAnalysis` / `models.browserAgent` — which Claude model each stage uses
 - `capture.maxRetriesPerStep`, `capture.maxTurnsPerStep`, `capture.headless`
-- `capture.tighten` — post-processes each captured clip to remove dead air (see below):
-  - `targetStepDurationSec` (default 4) — long clips are sped up toward this; clips already shorter are left alone
-  - `minStepDurationSec` (default 2.5) — floor; a shorter/collapsed clip holds its last frame to reach it
-  - `removeIdleFrames` (default false) — extra `mpdecimate` pass that drops near-duplicate frames; aggressive, best for extremely static UIs
+- `capture.pace` — removes the Claude "thinking" dead air by keeping only the windows around real actions (see below):
+  - `prerollSec` (default 0.5) — how much of the starting page to show before the first action
+  - `holdSec` (default 1.4) — how long to hold on the result after the last action
+  - `gapMergeSec` (default 0.4) — merge action windows closer than this so there are no visible jumps
+  - `minStepDurationSec` (default 2.5) — floor; a shorter step holds its last frame to reach it
   - `enabled` (default true) — set false to keep raw recordings
 - `capture.cursor` — a synthetic on-screen cursor that glides to each element and clicks, since Playwright's recording has no OS pointer (see below):
   - `enabled` (default true) — set false for pointerless, instant clicks
@@ -97,7 +98,7 @@ Set in `demo-gen.config.json`:
 }
 ```
 
-and put `ELEVENLABS_API_KEY` in your `.env`. When enabled, `generate` runs the narrate stage automatically. Each step's clip is re-timed to its voice line's length (this replaces the fixed `capture.tighten` target for narrated runs). Captions are kept alongside the voice by default; set `hyperframes.hideCaptionsWhenNarrated: true` to drop the on-screen text when narration is present.
+and put `ELEVENLABS_API_KEY` in your `.env`. When enabled, `generate` runs the narrate stage automatically. Each step's clip is held to its voice line's length (the motion is never sped up — only the final frame is held longer to fill the voice line). Captions are kept alongside the voice by default; set `hyperframes.hideCaptionsWhenNarrated: true` to drop the on-screen text when narration is present.
 
 ## Try it against the bundled fixture
 
@@ -120,7 +121,7 @@ Open the resulting `runs/<run-id>/demo.mp4`.
 
 ## Pacing / dead air
 
-The browser recording captures the whole agent loop, including the seconds spent waiting on each Claude API call between actions — a motionless page while the model "thinks". For mostly-static SaaS UIs that makes raw clips feel slow. The `capture.tighten` pass fixes this by giving each step a clean, consistent beat (default ~4s), only ever speeding up over-long clips, never slowing anything down. This is also the natural hook for narration: when voice is added, set each step's target duration to its voice-line length instead of a fixed number.
+The browser recording captures the whole agent loop, including the seconds spent waiting on each Claude API call between actions — a motionless page while the model "thinks". The `capture.pace` pass removes that dead air **by time, not by frame-differencing**: since the tool driver knows exactly when each action fires, it keeps only the windows around real actions (glide → click → result) plus a short preroll/hold and drops the thinking gaps. Everything kept — including the synthetic cursor glide — stays at true 1× speed. (Frame-drop approaches like `mpdecimate` can't be used here: a moving cursor changes only a few pixels per frame, so they treat the glide as duplicate frames and delete it.)
 
 ## Cursor
 

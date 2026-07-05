@@ -39,19 +39,24 @@ export const ConfigSchema = z.object({
       headless: z.boolean().default(true),
       video: ViewportSchema.default({ width: 1280, height: 720 }),
       fallbackStepDurationSec: z.number().default(3),
-      tighten: z
+      // Removes the Claude "thinking" dead air by keeping only the windows around real actions
+      // (glide, click, result) at true 1x speed, instead of frame-dropping (which eats the cursor
+      // glide) or uniform speed-up (which compresses it).
+      pace: z
         .object({
           enabled: z.boolean().default(true),
-          targetStepDurationSec: z.number().default(4),
+          prerollSec: z.number().default(0.5),
+          holdSec: z.number().default(1.4),
+          gapMergeSec: z.number().default(0.4),
           minStepDurationSec: z.number().default(2.5),
-          removeIdleFrames: z.boolean().default(false),
         })
         .default({}),
       cursor: z
         .object({
           enabled: z.boolean().default(true),
-          moveSteps: z.number().default(25),
-          clickPauseMs: z.number().default(250),
+          moveSteps: z.number().default(30),
+          moveDurationMs: z.number().default(850),
+          clickPauseMs: z.number().default(400),
           typeDelayMs: z.number().default(55),
         })
         .default({}),

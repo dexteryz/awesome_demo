@@ -6,6 +6,7 @@ import type { DemoStep } from "../pr-analysis/schema.js";
 import { toolDefinitions, createToolExecutors, type ToolExecutors } from "./tools.js";
 import { capturePageState } from "./page-state.js";
 import type { CursorMotion } from "./cursor.js";
+import type { ActionSpan } from "./pace-clip.js";
 import type { ToolCallLogEntry } from "./manifest.js";
 
 const STEP_SYSTEM_PROMPT = `You are driving a real web browser, one step of a product demo at a time. You will \
@@ -21,7 +22,12 @@ export interface StepAgentResult {
   success: boolean;
   reason: string;
   toolCallLog: ToolCallLogEntry[];
+  actionSpans: ActionSpan[];
 }
+
+// Tools that produce meaningful on-screen motion worth keeping in the paced clip (excludes
+// take_screenshot / finish_step, which change nothing visible).
+const VISIBLE_TOOLS = new Set(["click", "type", "navigate", "press_key", "scroll", "wait_for"]);
 
 function stepContextText(step: DemoStep): string {
   return `Step instruction: ${step.instruction}\nExpected outcome: ${step.expectedOutcome}`;
@@ -75,6 +81,7 @@ export async function runStepAgentLoop(params: {
   const client = getClaudeClient();
   const executors = createToolExecutors(page, motion);
   const toolCallLog: ToolCallLogEntry[] = [];
+  const actionSpans: ActionSpan[] = [];
 
   const messages: Anthropic.MessageParam[] = [
     { role: "user", content: await pageStateContent(page, step) },
@@ -106,6 +113,7 @@ export async function runStepAgentLoop(params: {
           textBlock?.text ?? "(no text)"
         }`,
         toolCallLog,
+        actionSpans,
       };
     }
 
@@ -119,7 +127,11 @@ export async function runStepAgentLoop(params: {
         toolResultBlocks.push({ type: "tool_result", tool_use_id: toolUse.id, content: "Step finished." });
         continue;
       }
+      const startMs = Date.now();
       const result = await runTool(executors, toolUse.name, input);
+      if (VISIBLE_TOOLS.has(toolUse.name) && !result.isError) {
+        actionSpans.push({ tool: toolUse.name, startMs, endMs: Date.now() });
+      }
       toolCallLog.push({ turn, tool: toolUse.name, input, resultSummary: result.content.slice(0, 300) });
       logger.info(`  [turn ${turn}] ${toolUse.name}(${JSON.stringify(input)}) -> ${result.content.slice(0, 120)}`);
       toolResultBlocks.push({
@@ -131,12 +143,17 @@ export async function runStepAgentLoop(params: {
     }
 
     if (finishResult) {
-      return { success: finishResult.success, reason: finishResult.reason, toolCallLog };
+      return { success: finishResult.success, reason: finishResult.reason, toolCallLog, actionSpans };
     }
 
     const refreshedState = await pageStateContent(page, step);
     messages.push({ role: "user", content: [...toolResultBlocks, ...refreshedState] });
   }
 
-  return { success: false, reason: `Turn budget (${maxTurns}) exceeded without calling finish_step`, toolCallLog };
+  return {
+    success: false,
+    reason: `Turn budget (${maxTurns}) exceeded without calling finish_step`,
+    toolCallLog,
+    actionSpans,
+  };
 }
