@@ -34,7 +34,7 @@ npm run demo-gen -- <command> [options]
 If you want a shorter command, add a shell alias (adjust the path):
 
 ```bash
-alias demo-gen='npm run --silent --prefix /path/to/awesome_demos demo-gen --'
+alias demo-gen='npm run --silent --prefix /path/to/awesome_demo demo-gen --'
 ```
 
 Provide your API key by exporting it, or putting it in a `.env` file at the project root (auto-loaded, gitignored):
