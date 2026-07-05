@@ -2,8 +2,8 @@ import { escapeHtml } from "../html-utils.js";
 
 const CAPTION_STYLE =
   "position:absolute; left:50%; bottom:60px; transform:translateX(-50%); background:rgba(15,23,42,0.85); " +
-  "color:#fff; font-size:32px; font-weight:600; padding:16px 32px; border-radius:12px; max-width:80%; " +
-  "text-align:center;";
+  "color:#fff; font-size:30px; font-weight:600; line-height:1.35; padding:16px 32px; border-radius:12px; " +
+  "max-width:82%; text-align:center; box-sizing:border-box;";
 
 export function successStepHtml(params: {
   start: number;

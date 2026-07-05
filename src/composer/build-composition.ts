@@ -42,7 +42,7 @@ export async function buildComposition(params: {
 
   for (const manifestStep of manifest.steps) {
     const demoStep = stepsById.get(manifestStep.id);
-    const captionText = manifestStep.captionText || demoStep?.captionText || manifestStep.instruction;
+    const shortLabel = manifestStep.captionText || demoStep?.captionText || manifestStep.instruction;
 
     // Copy the narration audio (if the narrate stage produced it) into the composition and time the
     // segment to it. hideCaptionsWhenNarrated lets a narrated video drop the burned-in caption.
@@ -53,6 +53,9 @@ export async function buildComposition(params: {
       audioSrc = `assets/${audioFileName}`;
     }
     const showCaption = !(audioSrc && hideCaptionsWhenNarrated);
+    // When narrated, the caption is a subtitle of the spoken line so the read text matches the
+    // heard text; otherwise it's the short action label.
+    const captionText = audioSrc ? manifestStep.narrationText || shortLabel : shortLabel;
 
     if (manifestStep.status === "success" && manifestStep.clipPath) {
       const durationSec = manifestStep.clipDurationMs
