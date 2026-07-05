@@ -35,7 +35,7 @@
     "hideCaptionsWhenNarrated": false
   },
   "narration": {
-    "enabled": false,
+    "enabled": true,
     "provider": "elevenlabs",
     "voiceId": "${ELEVENLABS_VOICE_ID}",
     "modelId": "eleven_multilingual_v2",

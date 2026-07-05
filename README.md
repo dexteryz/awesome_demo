@@ -98,7 +98,7 @@ Set in `demo-gen.config.json`:
 }
 ```
 
-The `voiceId` supports `${ENV_VAR}` references (same convention as `auth` seed steps), so you can keep your personal voice id in `.env` (`ELEVENLABS_VOICE_ID=…`) rather than the committed config. Put `ELEVENLABS_API_KEY` in your `.env` too. The on/off toggle can also come from `.env` via `NARRATION_ENABLED=true`. When enabled, `generate` runs the narrate stage automatically. Each step's clip is held to its voice line's length (the motion is never sped up — only the final frame is held longer to fill the voice line). Captions are kept alongside the voice by default; set `hyperframes.hideCaptionsWhenNarrated: true` to drop the on-screen text when narration is present.
+Secrets stay in `.env`, feature choices stay in the config: put `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` in `.env`, and the config references the voice id as `${ELEVENLABS_VOICE_ID}` (the `${ENV_VAR}` convention, same as `auth` seed steps). Turn narration on/off with `narration.enabled` in the config. When enabled, `generate` runs the narrate stage automatically. Each step's clip is held to its voice line's length (the motion is never sped up — only the final frame is held longer to fill the voice line). Captions are kept alongside the voice by default; set `hyperframes.hideCaptionsWhenNarrated: true` to drop the on-screen text when narration is present.
 
 Other `narration` options:
 - `wordSync` (default true) — word-synced "karaoke" captions: each word brightens as it's spoken, using ElevenLabs' per-character timing (the `with-timestamps` endpoint) driven by a seeked GSAP timeline. Set false for a plain static subtitle.
