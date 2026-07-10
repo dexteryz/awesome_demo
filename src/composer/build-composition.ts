@@ -19,10 +19,10 @@ export interface BuildCompositionResult {
 
 /**
  * Turns a CaptureManifest (+ the DemoScript it was captured from) into a Hyperframes `index.html`
- * composition: an intro card, one segment per manifest step (a muted <video> + caption overlay on
- * success, or a static fallback card on failure so partial captures still assemble end-to-end),
- * and an outro card. Every timed element carries class="clip" and data-start/data-duration/
- * data-track-index per Hyperframes' runtime requirements.
+ * composition: an optional intro card, one segment per manifest step (a muted <video> + caption
+ * overlay on success, or a static fallback card on failure so partial captures still assemble
+ * end-to-end), and an optional outro card. Every timed element carries class="clip" and
+ * data-start/data-duration/data-track-index per Hyperframes' runtime requirements.
  */
 export async function buildComposition(params: {
   demoScript: DemoScript;
@@ -30,15 +30,25 @@ export async function buildComposition(params: {
   hyperframesProjectDir: string;
   fallbackStepDurationSec: number;
   hideCaptionsWhenNarrated: boolean;
+  showIntroCard: boolean;
+  showOutroCard: boolean;
 }): Promise<BuildCompositionResult> {
-  const { demoScript, manifest, hyperframesProjectDir, fallbackStepDurationSec, hideCaptionsWhenNarrated } = params;
+  const {
+    demoScript,
+    manifest,
+    hyperframesProjectDir,
+    fallbackStepDurationSec,
+    hideCaptionsWhenNarrated,
+    showIntroCard,
+    showOutroCard,
+  } = params;
 
   const assetsDir = join(hyperframesProjectDir, "assets");
   await mkdir(assetsDir, { recursive: true });
 
   const stepsById = new Map(demoScript.steps.map((s) => [s.id, s]));
 
-  let currentTime = INTRO_DURATION_SEC;
+  let currentTime = showIntroCard ? INTRO_DURATION_SEC : 0;
   const segments: string[] = [];
   // GSAP tweens (added to the seeked timeline) that highlight each caption word as it's spoken.
   const karaokeTweens: string[] = [];
@@ -108,7 +118,24 @@ export async function buildComposition(params: {
   }
 
   const outroStart = currentTime;
-  const totalDurationSec = outroStart + OUTRO_DURATION_SEC;
+  const totalDurationSec = outroStart + (showOutroCard ? OUTRO_DURATION_SEC : 0);
+
+  const introHtml = showIntroCard
+    ? introCardHtml({
+        start: 0,
+        duration: INTRO_DURATION_SEC,
+        featureName: demoScript.meta.featureName,
+        narrative: demoScript.userStory.narrative,
+      })
+    : "";
+  const outroHtml = showOutroCard
+    ? outroCardHtml({
+        start: outroStart,
+        duration: OUTRO_DURATION_SEC,
+        prTitle: demoScript.meta.prTitle,
+        prUrl: demoScript.meta.prUrl,
+      })
+    : "";
 
   const html = `<!doctype html>
 <html lang="en">
@@ -125,19 +152,9 @@ export async function buildComposition(params: {
   <body>
     <div id="root" data-composition-id="root" data-start="0" data-duration="${totalDurationSec}"
          data-width="${WIDTH}" data-height="${HEIGHT}">
-      ${introCardHtml({
-        start: 0,
-        duration: INTRO_DURATION_SEC,
-        featureName: demoScript.meta.featureName,
-        narrative: demoScript.userStory.narrative,
-      })}
+      ${introHtml}
       ${segments.join("\n")}
-      ${outroCardHtml({
-        start: outroStart,
-        duration: OUTRO_DURATION_SEC,
-        prTitle: demoScript.meta.prTitle,
-        prUrl: demoScript.meta.prUrl,
-      })}
+      ${outroHtml}
     </div>
 
     <script>
