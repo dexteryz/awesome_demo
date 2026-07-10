@@ -20,7 +20,9 @@ export const ConfigSchema = z.object({
     name: z.string(),
     baseUrl: z.string(),
     startPath: z.string().default("/"),
-    viewport: ViewportSchema.default({ width: 1440, height: 900 }),
+    // Must share capture.video's aspect ratio (see the refinement below), so this default tracks
+    // the 16:9 video default rather than a 16:10 desktop size.
+    viewport: ViewportSchema.default({ width: 1280, height: 720 }),
   }),
   auth: z
     .object({
@@ -94,7 +96,29 @@ export const ConfigSchema = z.object({
       repo: z.string().nullable().default(null),
     })
     .default({ repo: null }),
-});
+  })
+  // Playwright scales the recorded page to fit recordVideo.size while preserving the viewport's
+  // aspect ratio, filling the leftover area with flat gray. A 16:10 viewport recorded into a 16:9
+  // video therefore bakes a gray pillarbox into every clip, which no downstream `object-fit` can
+  // remove. Reject the mismatch at load time rather than discovering it in a rendered mp4.
+  .superRefine((config, ctx) => {
+    const { viewport } = config.app;
+    const { video } = config.capture;
+    const viewportAspect = viewport.width / viewport.height;
+    const videoAspect = video.width / video.height;
+    // ~1px of slack at 1280 wide; tight enough to catch 16:10 vs 16:9 (1.600 vs 1.778).
+    if (Math.abs(viewportAspect - videoAspect) > 0.001) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["app", "viewport"],
+        message:
+          `app.viewport (${viewport.width}x${viewport.height}, aspect ${viewportAspect.toFixed(3)}) must have the ` +
+          `same aspect ratio as capture.video (${video.width}x${video.height}, aspect ${videoAspect.toFixed(3)}); ` +
+          `otherwise Playwright pillarboxes every recorded clip with gray padding. ` +
+          `Set app.viewport to ${video.width}x${video.height} (or another size with the same aspect ratio).`,
+      });
+    }
+  });
 
 export type Config = z.infer<typeof ConfigSchema>;
 
