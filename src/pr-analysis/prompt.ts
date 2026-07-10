@@ -20,9 +20,16 @@ in-app result (e.g. a success banner appears), not opening the downloaded file.
 - Each step needs a natural-language "instruction" (the action to take) and "expectedOutcome" \
 (what should be visible once it succeeds) — someone else will resolve these against the live page, \
 so do not guess CSS selectors or exact element IDs.
-- "captionText" is a short (<=12 words) on-screen caption summarizing the step for a video overlay.
-- "narrationText" is one or two spoken-style sentences for a future voiceover track (not used yet, \
-but write it as if narrating the step aloud to a viewer).
+- "captionText" is a short (<=12 words) on-screen caption summarizing the step for a video overlay. \
+Write it for a non-technical viewer: use everyday, plain language a first-time user would understand. \
+Avoid jargon, product/API names, code terms (endpoint, payload, param, schema, config, boolean, \
+async, hook, component, prop, state, mutation, query, ID/UUID, token, webhook, CRUD, etc.), and \
+implementation details. Prefer verbs that describe user intent (e.g. "Save your changes", "See your \
+new report") over UI mechanics ("Click the button", "Submit the form"). Sentence case, no trailing period.
+- "narrationText" is one or two spoken-style sentences for a future voiceover track. Write it as \
+if talking to a friend who has never used the product: warm, conversational, benefit-oriented, and \
+free of the same jargon and code terms listed above. Focus on what the user gets or can now do, \
+not on how the feature is built.
 - Call the record_demo_script tool exactly once with the full result. Do not respond with plain text.`;
 
 export function buildUserPrompt(

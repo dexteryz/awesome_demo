@@ -12,10 +12,23 @@ export const DemoStepSchema = z.object({
   expectedOutcome: z
     .string()
     .describe("Natural-language description of what should be visible on screen once this step succeeds."),
-  captionText: z.string().describe("Short on-screen caption (<= 12 words) summarizing this step for a video overlay."),
+  captionText: z
+    .string()
+    .describe(
+      "Short on-screen caption (<= 12 words) summarizing this step for a video overlay. Use plain, " +
+        "everyday language for a non-technical first-time user; avoid jargon, product/API names, and " +
+        "code terms (endpoint, payload, param, schema, config, boolean, async, hook, component, prop, " +
+        "state, mutation, query, ID/UUID, token, webhook, CRUD, etc.). Prefer verbs of user intent " +
+        "('Save your changes') over UI mechanics ('Click Submit'). Sentence case, no trailing period."
+    ),
   narrationText: z
     .string()
-    .describe("One or two spoken-style sentences narrating this step, for future text-to-speech voiceover."),
+    .describe(
+      "One or two spoken-style sentences narrating this step, for text-to-speech voiceover. Write " +
+        "as if talking to a friend who has never used the product: warm, conversational, benefit-oriented. " +
+        "Avoid the same jargon and code terms called out for captionText. Focus on what the user gets " +
+        "or can now do, not on how it's built."
+    ),
   estimatedDurationSec: z
     .number()
     .min(1)
