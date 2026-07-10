@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+# A new push to a PR makes the in-flight run obsolete; don't pay for it.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the `engines.node` floor in package.json; the repo does not
+          # build under Node 20 (tsx's esbuild resolution differs).
+          node-version: 22
+          cache: npm
+
+      # `npm ci` installs the playwright package but not its browser binaries.
+      # Nothing here drives a browser, so leave them undownloaded.
+      - run: npm ci
+
+      - run: npm run typecheck
