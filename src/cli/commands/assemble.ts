@@ -27,6 +27,8 @@ export async function runAssemble(params: {
     hyperframesProjectDir,
     fallbackStepDurationSec: config.capture.fallbackStepDurationSec,
     hideCaptionsWhenNarrated: config.hyperframes.hideCaptionsWhenNarrated,
+    showIntroCard: config.hyperframes.showIntroCard,
+    showOutroCard: config.hyperframes.showOutroCard,
   });
   logger.info(`Composition built (${totalDurationSec.toFixed(1)}s total)`);
 

@@ -73,6 +73,8 @@ export const ConfigSchema = z.object({
     .object({
       outputFile: z.string().default("demo.mp4"),
       hideCaptionsWhenNarrated: z.boolean().default(true),
+      showIntroCard: z.boolean().default(false),
+      showOutroCard: z.boolean().default(false),
     })
     .default({}),
   narration: z
